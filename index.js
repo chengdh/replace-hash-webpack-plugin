@@ -102,7 +102,7 @@ ReplaceHashPlugin.prototype.apply = function (compiler) {
           var matches = item.match(new RegExp(regString));
           if (matches) {
             var oldFilename = matches[1];
-            var hash = mathes[2]
+            var hash = matches[2]
             var oldPath = oldFilename;
             var newPath = `${oldFilename}.${hash}`;
             data = self.doReplace(oldPath, newPath, data);
