@@ -25,6 +25,9 @@ function ReplaceHashPlugin(options) {
   if (!this.options.exts) {
     this.options.exts = ['.js', '.css'];
   }
+  if (!this.options.cssChunkFileName) {
+    this.options.cssChunkFileName = "assets/stylesheets/[name][contenthash:8].css";
+  }
 }
 
 ReplaceHashPlugin.prototype.apply = function (compiler) {
@@ -35,7 +38,7 @@ ReplaceHashPlugin.prototype.apply = function (compiler) {
   compiler.plugin('done', function (stats) {
     var publicPath = compiler.options.output.publicPath;
     var jsChunkFileName = compiler.options.output.filename;
-    var cssChunkFileName = compiler.options.output.filename;;
+    var cssChunkFileName = self.options.cssChunkFileName
 
     var patterns = self.options.src;
     packingGlob(patterns, self.options).forEach(function (file) {
@@ -99,7 +102,16 @@ ReplaceHashPlugin.prototype.apply = function (compiler) {
             var hash = matches[2]
             var oldPath = oldFilename;
             var newPath = `${oldFilename}.${hash}`;
-            data = self.doReplace(oldPath, newPath, data);
+
+            console.log("fullPath:", fullpath)
+            console.log("oldPath:", oldPath)
+            console.log("newPath:", newPath)
+
+            //排除文件名类似:1.js,1.12345678.js的文件
+            if (oldPath.length > 3) {
+              data = self.doReplace(oldPath, newPath, data);
+            }
+
           } else {
             console.log('[warnings]%s replace hash failed.', item);
           }
@@ -126,6 +138,13 @@ ReplaceHashPlugin.prototype.doReplace = function (oldPath, newPath, data) {
     var search = util.format(pattern.find, oldPath);
     var replacement = util.format(pattern.replace, newPath);
     var regexp = new RegExp(search, 'gm');
+    if (newPath.includes('fb5b206d')) {
+      console.log("search:", search)
+      console.log("replacement:", replacement)
+      console.log("regexp:", regexp)
+      var matches = data.match(regexp)
+      console.log("matches:", matches)
+    }
     data = data.replace(regexp, replacement);
   });
   return data;
