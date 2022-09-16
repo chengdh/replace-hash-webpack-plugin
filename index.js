@@ -15,15 +15,15 @@ var packingGlob = require('packing-glob');
 
 var defaultPatternList = [
   {
-    find: '%s.\\w+',
-    replace: '%s'
+    find: '%s\\.(\\w{8})?',
+    replace: '%s.'
   }
 ];
 
 function ReplaceHashPlugin(options) {
   this.options = options || {};
   if (!this.options.exts) {
-    this.options.exts = ['js', 'css'];
+    this.options.exts = ['.js', '.css'];
   }
 }
 
@@ -35,13 +35,7 @@ ReplaceHashPlugin.prototype.apply = function (compiler) {
   compiler.plugin('done', function (stats) {
     var publicPath = compiler.options.output.publicPath;
     var jsChunkFileName = compiler.options.output.filename;
-    var cssChunkFileName;
-    // 找出ExtractTextPlugin插件在plugins中的位置
-    compiler.options.plugins.forEach(function (pluginConfig) {
-      if (pluginConfig.filename) {
-        cssChunkFileName = pluginConfig.filename;
-      }
-    });
+    var cssChunkFileName = compiler.options.output.filename;;
 
     var patterns = self.options.src;
     packingGlob(patterns, self.options).forEach(function (file) {
@@ -123,8 +117,6 @@ ReplaceHashPlugin.prototype.apply = function (compiler) {
       console.log('%s created.', dest);
 
     });
-
-
   });
 
 };
