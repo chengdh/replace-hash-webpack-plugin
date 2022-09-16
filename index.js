@@ -15,15 +15,15 @@ var packingGlob = require('packing-glob');
 
 var defaultPatternList = [
   {
-    find: '([\'"])([/]?%s)(["\'])',
-    replace: '$1%s$3'
+    find: '%s.\\w+',
+    replace: '%s'
   }
 ];
 
 function ReplaceHashPlugin(options) {
   this.options = options || {};
   if (!this.options.exts) {
-    this.options.exts = ['js', 'css', 'png', 'jpg'];
+    this.options.exts = ['js', 'css'];
   }
 }
 
@@ -37,22 +37,22 @@ ReplaceHashPlugin.prototype.apply = function (compiler) {
     var jsChunkFileName = compiler.options.output.filename;
     var cssChunkFileName;
     // 找出ExtractTextPlugin插件在plugins中的位置
-    compiler.options.plugins.forEach(function(pluginConfig) {
+    compiler.options.plugins.forEach(function (pluginConfig) {
       if (pluginConfig.filename) {
         cssChunkFileName = pluginConfig.filename;
       }
     });
 
     var patterns = self.options.src;
-    packingGlob(patterns, self.options).forEach(function(file) {
+    packingGlob(patterns, self.options).forEach(function (file) {
       var fullpath = path.join(self.options.cwd, file);
       var data = fs.readFileSync(fullpath, 'utf8');
 
-      Object.keys(stats.compilation.assets).filter(function(item) {
-        return self.options.exts.some(function(e) {
+      Object.keys(stats.compilation.assets).filter(function (item) {
+        return self.options.exts.some(function (e) {
           return endsWith(item, e);
         });
-      }).forEach(function(item) {
+      }).forEach(function (item) {
         var ext = path.extname(item); //.js
         var name = path.basename(item, ext); //main-e1bb26
         var filename;
@@ -65,11 +65,11 @@ ReplaceHashPlugin.prototype.apply = function (compiler) {
             filename = cssChunkFileName;
             break;
           default:
-            compiler.options.module.rules.forEach(function(rule) {
+            compiler.options.module.rules.forEach(function (rule) {
               if (rule.test.test(ext) || rule.test.toString().indexOf(ext) > -1) {
                 var query = rule.query || rule.options;
                 if (rule.use) {
-                  rule.use.forEach(function(use) {
+                  rule.use.forEach(function (use) {
                     if (use.loader === 'url' ||
                       use.loader === 'url-loader' ||
                       use.loader === 'file' ||
@@ -96,14 +96,15 @@ ReplaceHashPlugin.prototype.apply = function (compiler) {
             .replace('\[path\]', '')
             .replace('\[name\]', '(\\S+)')
             .replace('\[ext\]', ext.substr(1, ext.length))
-            .replace('\[chunkhash:' + hashLength + '\]', '\\w{' + hashLength + '}')
-            .replace('\[contenthash:' + hashLength + '\]', '\\w{' + hashLength + '}')
-            .replace('\[hash:' + hashLength + '\]', '\\w{' + hashLength + '}');
+            .replace('\[chunkhash:' + hashLength + '\]', '(\\w{' + hashLength + '})')
+            .replace('\[contenthash:' + hashLength + '\]', '(\\w{' + hashLength + '})')
+            .replace('\[hash:' + hashLength + '\]', '(\\w{' + hashLength + '})');
           var matches = item.match(new RegExp(regString));
           if (matches) {
-            var oldFilename = matches[1] + ext;
+            var oldFilename = matches[1];
+            var hash = mathes[2]
             var oldPath = oldFilename;
-            var newPath = publicPath + item;
+            var newPath = `${oldFilename}.${hash}`;
             data = self.doReplace(oldPath, newPath, data);
           } else {
             console.log('[warnings]%s replace hash failed.', item);
@@ -112,17 +113,6 @@ ReplaceHashPlugin.prototype.apply = function (compiler) {
           console.log('[warnings]matching filename failed. filename: %s', filename);
         }
       });
-
-      // 将rev处理的文件也替换一遍
-      if (compiler.revSourceMap) {
-        Object.keys(compiler.revSourceMap).forEach(function(item) {
-          var newPath = compiler.revSourceMap[item];
-          if (self.options.assetsDomain) {
-            newPath = url.resolve(self.options.assetsDomain, newPath);
-          }
-          data = self.doReplace(item, newPath, data);
-        });
-      }
 
       var dest = path.resolve(self.options.dest, file);
       var destDir = path.dirname(dest);
@@ -140,7 +130,7 @@ ReplaceHashPlugin.prototype.apply = function (compiler) {
 };
 
 ReplaceHashPlugin.prototype.doReplace = function (oldPath, newPath, data) {
-  (this.options.pattern || defaultPatternList).forEach(function(pattern) {
+  (this.options.pattern || defaultPatternList).forEach(function (pattern) {
     var search = util.format(pattern.find, oldPath);
     var replacement = util.format(pattern.replace, newPath);
     var regexp = new RegExp(search, 'gm');
